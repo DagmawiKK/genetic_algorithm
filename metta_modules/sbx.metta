@@ -8,18 +8,14 @@
     (if (> $r $crossover_rate)
         ($p1 . $p2)  ; No crossover
         (let* (
-            ($child1 (sbx-crossover-loop $p1 $p2 $eta 0 4))
-            ($child2 (sbx-crossover-loop $p1 $p2 $eta 0 4))
-            ; ($child1 (sbx-crossover-rec $p1 $p2 $eta))
-            ; ($child2 (sbx-crossover-rec $p2 $p1 $eta))
+            ($child1 (sbx-crossover-loop $p1 $p2 $eta 0 (size-atom $p1))) 
+            ($child2 (sbx-crossover-loop $p1 $p2 $eta 0 (size-atom $p1)))
         )
         ($child1 . $child2)
         )
     )
 ))
 
-; Recursive helper to process each gene
-; Looping version of SBX crossover using index and pow-math for 1e-14
 (= (sbx-crossover-loop $xs $ys $eta $i $n)
     (if (>= $i $n)
         ()
@@ -68,4 +64,4 @@
 ; )
 
 ; Test the corrected implementation
-!(sbx-crossover (0.7812015273974839 0.9304311460475365 0.8856786021199445 0.9385503728389093) (0.2754761373239567 0.9304311460475365 0.4 0.8385503728389093) 1.05 0.9)
+; !(sbx-crossover (0.7812015273974839 0.9304311460475365 0.8856786021199445 0.9385503728389093) (0.2754761373239567 0.9304311460475365 0.4 0.8385503728389093) 1.05 0.9)
