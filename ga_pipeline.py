@@ -2,9 +2,9 @@ import random
 import numpy as np
 import math
 from hyperon import MeTTa, ValueAtom, ExpressionAtom, GroundedAtom, Atom, E # === Parameters ===
-POP_SIZE = 5
+POP_SIZE = 10
 GENES = 8
-GENERATIONS = 3
+GENERATIONS = 30
 ELITE_COUNT = 3
 CROSSOVER_RATE = 0.9
 MUTATION_RATE = 0.1
@@ -34,20 +34,40 @@ with open("metta_modules/roulette_stochastic_acceptance.metta") as f:
     roulette_code = f.read()
 metta.run(roulette_code)
 
+# with open("metta_modules/sbx_crossover.metta") as f:
+#     sbx_code = f.read()
+# metta.run(sbx_code)
+
+with open("metta_modules/mutate.metta") as f:
+    mutate_code = f.read()
+metta.run(mutate_code)
+
+def return_value(result):
+    res = []
+    for r in result[0]:
+        a = r.get_children()
+        for b in a:
+            if isinstance(b, GroundedAtom):
+                res.append(b.get_object().value)
+            else:
+                res.append(b)
+    return res
+    
+
 # === Fitness Function ===
 def fitness(candidate):
-    # emergence = [c - max(a, b) for c, a, b in zip(candidate, INPUT_A, INPUT_B)]
-    # emergence = [max(0, e) for e in emergence]  # clamp negative emergence to 0
-    # contributions = [min(a, b) * e for a, b, e in zip(INPUT_A, INPUT_B, emergence)]
-    # total = sum(contributions)
-    # return min(total / GENES, 1.0)
-    individual_str = " ".join(map(str, candidate))
-    input_a = " ".join(map(str, INPUT_A))
-    input_b = " ".join(map(str, INPUT_B))
-    metta_code = f"!(fitness ({individual_str}) ({input_a}) ({input_b}) {GENES})"
+    emergence = [c - max(a, b) for c, a, b in zip(candidate, INPUT_A, INPUT_B)]
+    emergence = [max(0, e) for e in emergence]  # clamp negative emergence to 0
+    contributions = [min(a, b) * e for a, b, e in zip(INPUT_A, INPUT_B, emergence)]
+    total = sum(contributions)
+    return min(total / GENES, 1.0)
+    # individual_str = " ".join(map(str, candidate))
+    # input_a = " ".join(map(str, INPUT_A))
+    # input_b = " ".join(map(str, INPUT_B))
+    # metta_code = f"!(fitness ({individual_str}) ({input_a}) ({input_b}) {GENES})"
     
-    result = metta.run(metta_code)
-    return list(*result)[0].get_object().value
+    # result = metta.run(metta_code)
+    # return list(*result)[0].get_object().value
 
 def initialize_population():
     result = metta.run(f"!(make-pop {POP_SIZE} {GENES})")
@@ -81,10 +101,8 @@ def roulette_stochastic_acceptance(population, fitnesses):
     for ind in population:
         pop.append(f"({' '.join(map(str, ind))})")
     population_str = "(" +" ".join(pop) + ")"
-    print("Population:", population_str)
 
     fitnesses_str = "(" + " ".join(map(str, fitnesses)) + ")"
-    print("Fitnesses:", fitnesses_str)
     metta_code = f"!(roulette-stochastic-acceptance {population_str} {fitnesses_str} {POP_SIZE})"
     result = metta.run(metta_code)
     res = []
@@ -99,12 +117,12 @@ def roulette_stochastic_acceptance(population, fitnesses):
 # roulette_stochastic_acceptance([[0.8193937549154807, 0.2870687320141297, 0.28302115505468817], [0.4857624121250905, 0.36375604006943674, 0.9438850285994436], [0.8214302000409923, 0.06945532976824123, 0.9596792755680533]], [0.1, 0.3, 0.5])
 
 # === Crossover: Simulated Binary Crossover (Adaptive Eta) ===
-def sbx_crossover(zippedParents, eta):
+def sbx_crossover(p1, p2, eta):
     if random.random() > CROSSOVER_RATE:
-        return zippedParents[0][:], zippedParents[1][:]
+        return p1[:], p2[:]
 
     child1, child2 = [], []
-    for x1, x2 in zippedParents:
+    for x1, x2 in zip(p1, p2):
         if random.random() <= 0.5:
             if abs(x1 - x2) > 1e-14:
                 x1, x2 = min(x1, x2), max(x1, x2)
@@ -125,38 +143,40 @@ def sbx_crossover(zippedParents, eta):
         else:
             child1.append(x1)
             child2.append(x2)
+    print(f"SBX Crossover")
     return child1, child2
 
 # === Mutation ===
 def mutate(individual, mutation_std):
-    for i in range(len(individual)):
-        if random.random() < MUTATION_RATE:
-            individual[i] += random.gauss(0, mutation_std)
-            individual[i] = min(max(individual[i], 0), 1)  # clip to [0, 1]
-    return individual
+    # for i in range(len(individual)):
+    #     if random.random() < MUTATION_RATE:
+    #         individual[i] += random.gauss(0, mutation_std)
+    #         individual[i] = min(max(individual[i], 0), 1)  # clip to [0, 1]
+    # return individual
+    individual_str = " ".join(map(str, individual))
+    metta_code = f"!(mutate ({individual_str}) {mutation_std} {MUTATION_RATE})"
+    result = metta.run(metta_code)
+    result = return_value(result)
+    return result
+
 
 # === Main GA Loop ===
 def genetic_algorithm():
     population = initialize_population()
     mutation_std = INITIAL_MUTATION_STD
     sbx_eta = INITIAL_SBX_ETA
-    print("Initial Population:", population)
     for gen in range(GENERATIONS):
         fitnesses = []
         for ind in population:
             f = fitness(ind)
             fitnesses.append(f)
-            print(f"Individual: {ind} | Fitness: {f:.4f}")
-        # fitnesses = [fitness(ind) for ind in population]
         elites = sorted(zip(population, fitnesses), key=lambda x: x[1], reverse=True)[:ELITE_COUNT]
         new_population = [ind for ind, _ in elites]
 
         while len(new_population) < POP_SIZE:
             parent1 = roulette_stochastic_acceptance(population, fitnesses)
-            print(f"Selected Parent 1: {parent1}")
             parent2 = roulette_stochastic_acceptance(population, fitnesses)
-            print(f"Selected Parent 2: {parent2}")
-            child1, child2 = sbx_crossover(zip(parent1, parent2), eta=sbx_eta)
+            child1, child2 = sbx_crossover(parent1, parent2, eta=sbx_eta)
             new_population.extend([mutate(child1, mutation_std), mutate(child2, mutation_std)])
 
         population = new_population[:POP_SIZE]  # Ensure population size remains constant
