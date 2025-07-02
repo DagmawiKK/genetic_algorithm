@@ -34,9 +34,9 @@ with open("metta_modules/roulette_stochastic_acceptance.metta") as f:
     roulette_code = f.read()
 metta.run(roulette_code)
 
-# with open("metta_modules/sbx_crossover.metta") as f:
-#     sbx_code = f.read()
-# metta.run(sbx_code)
+with open("metta_modules/sbx.metta") as f:
+    sbx_code = f.read()
+metta.run(sbx_code)
 
 with open("metta_modules/mutate.metta") as f:
     mutate_code = f.read()
@@ -118,33 +118,43 @@ def roulette_stochastic_acceptance(population, fitnesses):
 
 # === Crossover: Simulated Binary Crossover (Adaptive Eta) ===
 def sbx_crossover(p1, p2, eta):
-    if random.random() > CROSSOVER_RATE:
-        return p1[:], p2[:]
+    # if random.random() > CROSSOVER_RATE:
+    #     return p1[:], p2[:]
 
-    child1, child2 = [], []
-    for x1, x2 in zip(p1, p2):
-        if random.random() <= 0.5:
-            if abs(x1 - x2) > 1e-14:
-                x1, x2 = min(x1, x2), max(x1, x2)
-                rand = random.random()
-                beta = 1.0 + (2.0 * (x1) / (x2 - x1))
-                alpha = 2.0 - beta ** -(eta + 1)
-                if rand <= 1.0 / alpha:
-                    betaq = (rand * alpha) ** (1.0 / (eta + 1))
-                else:
-                    betaq = (1.0 / (2.0 - rand * alpha)) ** (1.0 / (eta + 1))
-                c1 = 0.5 * ((x1 + x2) - betaq * (x2 - x1))
-                c2 = 0.5 * ((x1 + x2) + betaq * (x2 - x1))
-                child1.append(min(max(c1, 0.0), 1.0))
-                child2.append(min(max(c2, 0.0), 1.0))
-            else:
-                child1.append(x1)
-                child2.append(x2)
-        else:
-            child1.append(x1)
-            child2.append(x2)
-    print(f"SBX Crossover")
+    # child1, child2 = [], []
+    # for x1, x2 in zip(p1, p2):
+    #     if random.random() <= 0.5:
+    #         if abs(x1 - x2) > 1e-14:
+    #             x1, x2 = min(x1, x2), max(x1, x2)
+    #             rand = random.random()
+    #             beta = 1.0 + (2.0 * (x1) / (x2 - x1))
+    #             alpha = 2.0 - beta ** -(eta + 1)
+    #             if rand <= 1.0 / alpha:
+    #                 betaq = (rand * alpha) ** (1.0 / (eta + 1))
+    #             else:
+    #                 betaq = (1.0 / (2.0 - rand * alpha)) ** (1.0 / (eta + 1))
+    #             c1 = 0.5 * ((x1 + x2) - betaq * (x2 - x1))
+    #             c2 = 0.5 * ((x1 + x2) + betaq * (x2 - x1))
+    #             child1.append(min(max(c1, 0.0), 1.0))
+    #             child2.append(min(max(c2, 0.0), 1.0))
+    #         else:
+    #             child1.append(x1)
+    #             child2.append(x2)
+    #     else:
+    #         child1.append(x1)
+    #         child2.append(x2)
+    # print(f"SBX Crossover")
+    # return child1, child2
+    p1_str = " ".join(map(str, p1))
+    p2_str = " ".join(map(str, p2))
+    metta_code = f"!(sbx-crossover ({p1_str}) ({p2_str}) {eta} {CROSSOVER_RATE})"
+    result = metta.run(metta_code)
+    tmp = return_value(result)
+    child1 = [child.get_object().value for child in tmp[0].get_children()]
+    child2 = [child.get_object().value for child in tmp[2].get_children()]
     return child1, child2
+    
+
 
 # === Mutation ===
 def mutate(individual, mutation_std):
