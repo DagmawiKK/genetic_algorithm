@@ -2,7 +2,6 @@
 !(import! &self rand)
 
 
-; Recursive helper that walks through index positions
 (= (mutate-rec $ind $std $mutation-rate $i $len)
    (if (>= $i $len)
        ()
@@ -28,7 +27,6 @@
    )
 )
 
-; Entry function (mutation starts from index 0)
 (= (mutate $ind $std $mutation-rate)
     (mutate-rec $ind $std $mutation-rate 0 (size-atom $ind)))
 
