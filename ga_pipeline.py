@@ -1,7 +1,7 @@
 import random
 import numpy as np
 import math
-from hyperon import MeTTa, ValueAtom, ExpressionAtom, GroundedAtom, Atom, E # === Parameters ===
+from hyperon import MeTTa, ValueAtom, ExpressionAtom, GroundedAtom, Atom, E
 POP_SIZE = 10
 GENES = 8
 GENERATIONS = 30
@@ -56,18 +56,18 @@ def return_value(result):
 
 # === Fitness Function ===
 def fitness(candidate):
-    emergence = [c - max(a, b) for c, a, b in zip(candidate, INPUT_A, INPUT_B)]
-    emergence = [max(0, e) for e in emergence]  # clamp negative emergence to 0
-    contributions = [min(a, b) * e for a, b, e in zip(INPUT_A, INPUT_B, emergence)]
-    total = sum(contributions)
-    return min(total / GENES, 1.0)
-    # individual_str = " ".join(map(str, candidate))
-    # input_a = " ".join(map(str, INPUT_A))
-    # input_b = " ".join(map(str, INPUT_B))
-    # metta_code = f"!(fitness ({individual_str}) ({input_a}) ({input_b}) {GENES})"
+    # emergence = [c - max(a, b) for c, a, b in zip(candidate, INPUT_A, INPUT_B)]
+    # emergence = [max(0, e) for e in emergence]  # clamp negative emergence to 0
+    # contributions = [min(a, b) * e for a, b, e in zip(INPUT_A, INPUT_B, emergence)]
+    # total = sum(contributions)
+    # return min(total / GENES, 1.0)
+    individual_str = " ".join(map(str, candidate))
+    input_a = " ".join(map(str, INPUT_A))
+    input_b = " ".join(map(str, INPUT_B))
+    metta_code = f"!(fitness ({individual_str}) ({input_a}) ({input_b}) {GENES})"
     
-    # result = metta.run(metta_code)
-    # return list(*result)[0].get_object().value
+    result = metta.run(metta_code)
+    return list(*result)[0].get_object().value
 
 def initialize_population():
     result = metta.run(f"!(make-pop {POP_SIZE} {GENES})")
@@ -86,6 +86,19 @@ def initialize_population():
     return res
 
 # === Selection: Roulette-Wheel via Stochastic Acceptance ===
+
+def roulette_wheel_selection_T(population, fitnesses):
+    total_fitness = sum(fitnesses)
+    
+    spin = random.uniform(0, total_fitness)
+    
+    current_sum = 0
+    for i, (ind, fit) in enumerate(zip(population, fitnesses)):
+        current_sum += fit
+        if current_sum >= spin:
+            return ind
+    
+    return population[-1]
 def roulette_stochastic_acceptance(population, fitnesses):
     # w_max = max(fitnesses)
     # if w_max == 0:
@@ -105,16 +118,7 @@ def roulette_stochastic_acceptance(population, fitnesses):
     fitnesses_str = "(" + " ".join(map(str, fitnesses)) + ")"
     metta_code = f"!(roulette-stochastic-acceptance {population_str} {fitnesses_str} {POP_SIZE})"
     result = metta.run(metta_code)
-    res = []
-    for r in result[0]:
-        a = r.get_children()
-        for b in a:
-            if isinstance(b, GroundedAtom):
-                res.append(b.get_object().value)
-            else:
-                res.append(b)
-    return res
-# roulette_stochastic_acceptance([[0.8193937549154807, 0.2870687320141297, 0.28302115505468817], [0.4857624121250905, 0.36375604006943674, 0.9438850285994436], [0.8214302000409923, 0.06945532976824123, 0.9596792755680533]], [0.1, 0.3, 0.5])
+    return return_value(result)
 
 # === Crossover: Simulated Binary Crossover (Adaptive Eta) ===
 def sbx_crossover(p1, p2, eta):
