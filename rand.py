@@ -15,10 +15,6 @@ def _update_seed():
     """Internal function to update the random seed for better randomness."""
     random.seed(time.time_ns())
 
-def getRandFloatArray(length):
-    _update_seed()
-    arr = (ValueAtom(random.uniform(0.0, 1.0)) for _ in range(length.get_object().value))
-    return [E(*arr)]
 def gaussian_random(mean, stddev):
     _update_seed()
     mean = mean.get_object().value
@@ -28,6 +24,5 @@ def gaussian_random(mean, stddev):
 @register_atoms
 def my_glob_atoms():
     return {
-        'randfloatarr!': OperationAtom("randfloatarr!", getRandFloatArray, unwrap=False),
         'gaussian-random': OperationAtom("gaussian-random", gaussian_random, unwrap=False),
     }
